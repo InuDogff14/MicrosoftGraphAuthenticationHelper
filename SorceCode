@@ -1,0 +1,72 @@
+using Microsoft.Graph;
+using Microsoft.Graph.ExternalConnectors;
+using Microsoft.Identity.Client;
+using System.IO;
+using System.Linq;
+using System.Net.Http.Headers;
+using System.Text.Json;
+using System.Threading.Tasks;
+
+public class AuthenticationHelper
+{
+    public const string ClientId = "CLIENT_ID";
+    public const string Instance = "INSTANCE";
+    public const string Tenant = "TENANT";
+    public const string Authority = Instance + Tenant;
+    public const string DefaultRedirectUri = "DEFAULT_REDIRECT_URI";
+    public const string GroupId = "GROUP_ID";
+
+    public const string ChanelId = "CHANEL_ID";
+    private static string[] Scopes { get; } = {"USE_SCOPES"};
+
+    private static IPublicClientApplication publicClientApp;
+    private static GraphServiceClient authenticatedClient = null;
+    private static AuthenticationResult authResult;
+
+    public async static Task<GraphServiceClient> GetAuthenticatedClientAsync()
+    {
+        if (authenticatedClient == null)
+        {
+            authenticatedClient = new GraphServiceClient(
+                new DelegateAuthenticationProvider(async (requestMessage) =>
+                {
+                    requestMessage.Headers.Authorization
+                        = new AuthenticationHeaderValue("bearer", await GetTokenForUserAsync(Scopes));
+                }));
+        }
+
+        return await Task.FromResult(authenticatedClient);
+    }
+
+    private static async Task<string> GetTokenForUserAsync(string[] scopes)
+    {
+        if (publicClientApp == null)
+        {
+            publicClientApp = PublicClientApplicationBuilder.Create(ClientId)
+                                .WithRedirectUri(DefaultRedirectUri)
+                                .WithAuthority(AzureCloudInstance.AzurePublic, Tenant)
+                                .Build();
+        }
+
+        var accounts = await publicClientApp.GetAccountsAsync();
+        var firstAccount = accounts.FirstOrDefault();
+
+        if (firstAccount != null)
+        {
+            try
+            {
+                authResult = await publicClientApp.AcquireTokenSilent(scopes, firstAccount).ExecuteAsync();
+                return authResult.AccessToken;
+            }
+            catch
+            {
+                authResult = await publicClientApp.AcquireTokenInteractive(scopes)
+                                                .ExecuteAsync()
+                                                .ConfigureAwait(false);
+            }
+        }
+
+        authResult = await publicClientApp.AcquireTokenInteractive(scopes).ExecuteAsync();
+        return authResult.AccessToken;
+    }
+}
