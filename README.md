@@ -1,1 +1,3 @@
 # MicrosoftGraphAuthenticationHelper
+
+このリポジトリは、Microsoft Graph APIを使用して認証を行い、認証済みのGraphServiceClientインスタンスを取得するためのヘルパークラスです。このクラスを使用することで、Microsoft Graph APIに対して認証が必要なアプリケーションを簡単に作成できます。
